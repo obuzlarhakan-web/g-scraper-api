@@ -1,6 +1,8 @@
 const puppeteer = require("puppeteer");
 
 async function searchPlaces({ keyword, location, limit }) {
+  console.log("SCRAPER.JS ÇALIŞAN SÜRÜM: PUPPETEER (Chrome yüklü)");
+
   const browser = await puppeteer.launch({
     headless: "new",
     args: [
@@ -23,20 +25,16 @@ async function searchPlaces({ keyword, location, limit }) {
   const query = encodeURIComponent(`${keyword} ${location}`);
   const url = `https://www.google.com/maps/search/${query}`;
 
-  console.log("Gidilen URL:", url);
-
   await page.goto(url, { waitUntil: "networkidle2", timeout: 120000 });
 
-  // Sonuç listesi yüklenene kadar bekle
   await page.waitForSelector('div[role="feed"]', { timeout: 60000 });
 
-  // Birkaç kez scroll edip daha fazla sonuç yüklüyoruz
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 6; i++) {
     await page.evaluate(() => {
       const feed = document.querySelector('div[role="feed"]');
-      if (feed) feed.scrollBy(0, 1000);
+      if (feed) feed.scrollBy(0, 1500);
     });
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(600);
   }
 
   const results = await page.evaluate((max) => {
@@ -46,34 +44,23 @@ async function searchPlaces({ keyword, location, limit }) {
     for (const item of items) {
       if (out.length >= max) break;
 
-      const name =
-        item.querySelector('div[role="heading"]')?.textContent?.trim() || null;
+      const name = item.querySelector('div[role="heading"]')?.textContent?.trim() || null;
 
       const address =
         item.querySelector('[aria-label*="Adres"], [aria-label*="Address"]')
           ?.textContent?.trim() || null;
 
-      let rating = null;
-      const rat = item.querySelector(
-        'span[aria-label*="yıldız"], span[aria-label*="star"]'
-      );
-      if (rat) {
-        const m = rat.getAttribute("aria-label").match(/([\d,.]+)/);
-        rating = m ? parseFloat(m[1].replace(",", ".")) : null;
-      }
-
       out.push({
         name,
         address,
-        rating,
+        rating: null,
         phone: null,
         website: null,
+        reviews_count: null,
         lat: null,
-        lng: null,
-        reviews_count: null
+        lng: null
       });
     }
-
     return out;
   }, limit || 20);
 
