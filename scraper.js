@@ -1,3 +1,4 @@
+console.log("SCRAPER.JS ÇALIŞAN SÜRÜM: Yeni Chromium'lu sürüm");
 const puppeteer = require("puppeteer");
 
 async function searchPlaces({ keyword, location, limit }) {
