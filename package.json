@@ -1,0 +1,14 @@
+{
+  "name": "g-scraper-api",
+  "version": "1.0.0",
+  "description": "Basit Google Maps scraper API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.19.0",
+    "puppeteer": "^22.0.0"
+  }
+}
