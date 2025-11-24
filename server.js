@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const scraper = require('./scraper');
+const scraper = require('./api/scraper');
 
 const app = express();
 app.use(bodyParser.json());
