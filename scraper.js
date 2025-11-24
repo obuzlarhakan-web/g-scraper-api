@@ -1,10 +1,14 @@
 const puppeteer = require("puppeteer");
+const path = require("path");
 
 async function searchPlaces({ keyword, location, limit }) {
-  console.log("SCRAPER.JS ÇALIŞAN SÜRÜM: PUPPETEER (Chrome yüklü)");
+  console.log("SCRAPER.JS: Render için özel Chrome path'i kullanılıyor");
+
+  const chromePath = "/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome";
 
   const browser = await puppeteer.launch({
     headless: "new",
+    executablePath: chromePath,       // 🔥 ÖNEMLİ SATIR
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
@@ -26,34 +30,19 @@ async function searchPlaces({ keyword, location, limit }) {
   const url = `https://www.google.com/maps/search/${query}`;
 
   console.log("Gidilen URL:", url);
-
   await page.goto(url, { waitUntil: "networkidle2", timeout: 120000 });
 
-  // Sonuç listesi paneli gelsin
   await page.waitForSelector('div[role="feed"]', { timeout: 60000 });
-
-  // Daha fazla sonuç için biraz scroll
-  for (let i = 0; i < 6; i++) {
-    await page.evaluate(() => {
-      const feed = document.querySelector('div[role="feed"]');
-      if (feed) feed.scrollBy(0, 1500);
-    });
-    await page.waitForTimeout(600);
-  }
 
   const results = await page.evaluate((max) => {
     const out = [];
     const items = document.querySelectorAll('div[role="article"]');
 
-    for (const item of items) {
-      if (out.length >= max) break;
+    items.forEach((item) => {
+      if (out.length >= max) return;
 
-      const name =
-        item.querySelector('div[role="heading"]')?.textContent?.trim() || null;
-
-      const address =
-        item.querySelector('[aria-label*="Adres"], [aria-label*="Address"]')
-          ?.textContent?.trim() || null;
+      const name = item.querySelector('div[role="heading"]')?.textContent?.trim() || null;
+      const address = item.querySelector('[aria-label*="Adres"], [aria-label*="Address"]')?.textContent?.trim() || null;
 
       out.push({
         name,
@@ -61,11 +50,11 @@ async function searchPlaces({ keyword, location, limit }) {
         rating: null,
         phone: null,
         website: null,
-        reviews_count: null,
         lat: null,
-        lng: null
+        lng: null,
+        reviews_count: null,
       });
-    }
+    });
 
     return out;
   }, limit || 20);
