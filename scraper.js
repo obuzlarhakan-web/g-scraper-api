@@ -1,4 +1,3 @@
-console.log("SCRAPER.JS ÇALIŞAN SÜRÜM: Yeni Chromium'lu sürüm");
 const puppeteer = require("puppeteer");
 
 async function searchPlaces({ keyword, location, limit }) {
@@ -26,10 +25,14 @@ async function searchPlaces({ keyword, location, limit }) {
   const query = encodeURIComponent(`${keyword} ${location}`);
   const url = `https://www.google.com/maps/search/${query}`;
 
+  console.log("Gidilen URL:", url);
+
   await page.goto(url, { waitUntil: "networkidle2", timeout: 120000 });
 
+  // Sonuç listesi paneli gelsin
   await page.waitForSelector('div[role="feed"]', { timeout: 60000 });
 
+  // Daha fazla sonuç için biraz scroll
   for (let i = 0; i < 6; i++) {
     await page.evaluate(() => {
       const feed = document.querySelector('div[role="feed"]');
@@ -45,7 +48,8 @@ async function searchPlaces({ keyword, location, limit }) {
     for (const item of items) {
       if (out.length >= max) break;
 
-      const name = item.querySelector('div[role="heading"]')?.textContent?.trim() || null;
+      const name =
+        item.querySelector('div[role="heading"]')?.textContent?.trim() || null;
 
       const address =
         item.querySelector('[aria-label*="Adres"], [aria-label*="Address"]')
@@ -62,6 +66,7 @@ async function searchPlaces({ keyword, location, limit }) {
         lng: null
       });
     }
+
     return out;
   }, limit || 20);
 
