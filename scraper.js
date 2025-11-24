@@ -1,12 +1,17 @@
-const chromium = require("@sparticuz/chromium");
-const puppeteer = require("puppeteer-core");
+const puppeteer = require("puppeteer");
 
 async function searchPlaces({ keyword, location, limit }) {
   const browser = await puppeteer.launch({
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
+    headless: "new",
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--no-zygote",
+      "--no-first-run",
+      "--window-size=1920,1080"
+    ]
   });
 
   const page = await browser.newPage();
@@ -17,6 +22,8 @@ async function searchPlaces({ keyword, location, limit }) {
 
   const query = encodeURIComponent(`${keyword} ${location}`);
   const url = `https://www.google.com/maps/search/${query}`;
+
+  console.log("Gidilen URL:", url);
 
   await page.goto(url, { waitUntil: "networkidle2", timeout: 120000 });
 
@@ -63,7 +70,7 @@ async function searchPlaces({ keyword, location, limit }) {
         website: null,
         lat: null,
         lng: null,
-        reviews_count: null,
+        reviews_count: null
       });
     }
 
