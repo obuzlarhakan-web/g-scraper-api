@@ -1,16 +1,16 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const scraper = require('./api/scraper');
+const scraper = require('./scraper'); // DİKKAT: ./api/scraper DEĞİL
 
 const app = express();
 app.use(bodyParser.json());
 
-// API canlı mı kontrol için
+// API canlı mı testi
 app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'G-Scraper API çalışıyor' });
 });
 
-// Scraping endpoint
+// Scrape endpoint
 app.post('/scrape', async (req, res) => {
   try {
     const { keyword, location, limit, filters } = req.body || {};
@@ -46,8 +46,7 @@ app.post('/scrape', async (req, res) => {
   }
 });
 
-// Render ve Railway ile uyumlu port seçimi
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`Scraper API listening on port ${PORT}`);
+  console.log('Scraper API listening on port', PORT);
 });
