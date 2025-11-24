@@ -1,90 +1,67 @@
-const puppeteer = require('puppeteer');
+const chromium = require("@sparticuz/chromium");
+const puppeteer = require("puppeteer-core");
 
-/**
- * Google Maps Scraper (Render uyumlu + gelişmiş)
- */
-async function searchPlaces({ keyword, location, limit, filters }) {
+async function searchPlaces({ keyword, location, limit }) {
+
   const browser = await puppeteer.launch({
-    headless: 'new',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-zygote',
-      '--no-first-run',
-      '--window-size=1920,1080'
-    ]
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
   });
 
   const page = await browser.newPage();
 
-  // Bot algılamasını azalt
   await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36'
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
   );
 
   const query = encodeURIComponent(`${keyword} ${location}`);
   const url = `https://www.google.com/maps/search/${query}`;
 
-  console.log("Maps URL:", url);
+  await page.goto(url, { waitUntil: "networkidle2", timeout: 120000 });
 
-  await page.goto(url, { waitUntil: 'networkidle0', timeout: 120000 });
-
-  // Liste panelinin yüklenmesini bekle
+  // Sonuç listesi yüklenene kadar bekle
   await page.waitForSelector('div[role="feed"]', { timeout: 60000 });
 
-  // Scroll ederek daha fazla sonuç yükle
-  const scrollContainer = 'div[role="feed"]';
-
-  for (let i = 0; i < 10; i++) {
-    try {
-      await page.evaluate((sel) => {
-        const el = document.querySelector(sel);
-        if (el) el.scrollBy(0, 1000);
-      }, scrollContainer);
-      await page.waitForTimeout(800);
-    } catch (_) {}
+  // Basit scroll (daha fazla sonuç yüklesin)
+  for (let i = 0; i < 8; i++) {
+    await page.evaluate(() => {
+      document.querySelector('div[role="feed"]').scrollBy(0, 1000);
+    });
+    await page.waitForTimeout(800);
   }
 
-  // Artık sonuçları toplayalım
   const results = await page.evaluate((max) => {
     const out = [];
-
     const items = document.querySelectorAll('div[role="article"]');
 
-    items.forEach((el) => {
-      if (out.length >= max) return;
+    for (let item of items) {
+      if (out.length >= max) break;
 
-      // İsim
-      const nameEl = el.querySelector('div[role="heading"]');
-      const name = nameEl ? nameEl.textContent.trim() : null;
+      const name = item.querySelector('div[role="heading"]')?.textContent?.trim() || null;
 
-      // Rating
+      const address =
+        item.querySelector('[aria-label*="Adres"], [aria-label*="Address"]')?.textContent?.trim() || null;
+
       let rating = null;
-      const ratingEl = el.querySelector('span[aria-label*="yıldız"], span[aria-label*="star"]');
-      if (ratingEl) {
-        const m = ratingEl.getAttribute('aria-label').match(/([\d,.]+)/);
-        rating = m ? parseFloat(m[1].replace(',', '.')) : null;
+      const rat = item.querySelector('span[aria-label*="yıldız"], span[aria-label*="star"]');
+      if (rat) {
+        const m = rat.getAttribute("aria-label").match(/([\d,.]+)/);
+        rating = m ? parseFloat(m[1].replace(",", ".")) : null;
       }
-
-      // Adres
-      const addressEl = el.querySelector('[aria-label*="Adres"], [aria-label*="Address"]');
-      const address = addressEl ? addressEl.textContent.trim() : null;
-
-      // (Telefon / Website / Review / Koordinat için detay paneline girmek gerek — sonra eklenebilir)
 
       out.push({
         name,
         address,
         rating,
-        reviews_count: null,
         phone: null,
         website: null,
         lat: null,
-        lng: null
+        lng: null,
+        reviews_count: null
       });
-    });
+    }
 
     return out;
   }, limit || 20);
